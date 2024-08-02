@@ -1,7 +1,20 @@
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link as RouterLink, useNavigate } from 'react-router-dom';
 import { supabase } from '../service/supabaseClient';
-import Swal from 'sweetalert2';
+import {
+  Box,
+  Button,
+  Container,
+  FormControl,
+  FormLabel,
+  Input,
+  VStack,
+  Heading,
+  Text,
+  Link,
+  Select,
+  useToast,
+} from '@chakra-ui/react';
 
 const Register = () => {
   const [email, setEmail] = useState('');
@@ -11,18 +24,23 @@ const Register = () => {
   const [alamat, setAlamat] = useState('');
   const [jenisKelamin, setJenisKelamin] = useState('');
   const navigate = useNavigate();
+  const toast = useToast();
 
   const handleRegister = async (e) => {
     e.preventDefault();
     
-    // Basic validation
     if (!email || !password || !namaLengkap || !noHp || !alamat || !jenisKelamin) {
-      Swal.fire('Error!', 'Please fill in all fields', 'error');
+      toast({
+        title: 'Error!',
+        description: 'Harap isi semua field',
+        status: 'error',
+        duration: 3000,
+        isClosable: true,
+      });
       return;
     }
   
     try {
-      // Sign up with Supabase Auth
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email,
         password,
@@ -30,7 +48,6 @@ const Register = () => {
   
       if (authError) throw authError;
   
-      // Update the user's profile with additional information
       const { error: updateError } = await supabase
         .from('users')
         .update({
@@ -43,97 +60,114 @@ const Register = () => {
   
       if (updateError) throw updateError;
   
-      Swal.fire('Sukses!', 'Registrasi berhasil', 'success');
+      toast({
+        title: 'Sukses!',
+        description: 'Registrasi berhasil',
+        status: 'success',
+        duration: 3000,
+        isClosable: true,
+      });
       navigate('/login');
     } catch (error) {
       console.error('Registration error:', error);
-      Swal.fire('Error!', `Registration failed: ${error.message}`, 'error');
+      toast({
+        title: 'Error!',
+        description: `Registrasi gagal: ${error.message}`,
+        status: 'error',
+        duration: 3000,
+        isClosable: true,
+      });
     }
   };
 
   return (
-    <div className="relative h-screen flex items-center justify-center">
-      {/* Background Image */}
-      <div className="absolute inset-0">
-        <img
-          src="/courted.jpg"
-          alt="Stadium"
-          className="w-full h-full object-cover"
-        />
-      </div>
-      
-      {/* Registration Form */}
-      <div className="relative z-10 bg-white p-8 rounded-lg shadow-md w-96">
-        <h2 className="text-2xl font-bold mb-6 text-center text-green-500">Daftar</h2>
-        <form onSubmit={handleRegister}>
-          <div className="mb-4">
-            <input
-              type="text"
-              placeholder="Nama Lengkap"
-              value={namaLengkap}
-              onChange={(e) => setNamaLengkap(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
-            />
-          </div>
-          <div className="mb-4">
-            <input
-              type="text"
-              placeholder="No HP"
-              value={noHp}
-              onChange={(e) => setNoHp(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
-            />
-          </div>
-          <div className="mb-4">
-            <input
-              type="email"
-              placeholder="Email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
-            />
-          </div>
-          <div className="mb-4">
-            <input
-              type="password"
-              placeholder="Password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
-            />
-          </div>
-          <div className="mb-4">
-            <input
-              type="text"
-              placeholder="Alamat"
-              value={alamat}
-              onChange={(e) => setAlamat(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
-            />
-          </div>
-          <div className="mb-4">
-            <select
-              value={jenisKelamin}
-              onChange={(e) => setJenisKelamin(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
-            >
-              <option value="">Pilih Jenis Kelamin</option>
-              <option value="Pria">Pria</option>
-              <option value="Wanita">Wanita</option>
-            </select>
-          </div>
-          <button
-            type="submit"
-            className="w-full bg-green-500 text-white py-2 rounded-md hover:bg-green-600 transition duration-300"
-          >
+    <Box
+      minH="100vh"
+      display="flex"
+      alignItems="center"
+      justifyContent="center"
+      bgImage="url('/courted.jpg')"
+      bgSize="cover"
+      bgPosition="center"
+    >
+      <Container
+        maxW="md"
+        bg="white"
+        p={8}
+        borderRadius="lg"
+        boxShadow="xl"
+        zIndex={1}
+      >
+        <VStack spacing={6}>
+          <Heading as="h2" size="xl" color="green.500">
             Daftar
-          </button>
-        </form>
-        <p className="mt-4 text-center text-sm">
-          Sudah punya akun? <Link to="/login" className="text-green-500 hover:underline">Login</Link>
-        </p>
-      </div>
-    </div>
+          </Heading>
+          <form onSubmit={handleRegister} style={{ width: '100%' }}>
+            <VStack spacing={4}>
+              <FormControl>
+                <Input
+                  type="text"
+                  placeholder="Nama Lengkap"
+                  value={namaLengkap}
+                  onChange={(e) => setNamaLengkap(e.target.value)}
+                />
+              </FormControl>
+              <FormControl>
+                <Input
+                  type="text"
+                  placeholder="No HP"
+                  value={noHp}
+                  onChange={(e) => setNoHp(e.target.value)}
+                />
+              </FormControl>
+              <FormControl>
+                <Input
+                  type="email"
+                  placeholder="Email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                />
+              </FormControl>
+              <FormControl>
+                <Input
+                  type="password"
+                  placeholder="Password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                />
+              </FormControl>
+              <FormControl>
+                <Input
+                  type="text"
+                  placeholder="Alamat"
+                  value={alamat}
+                  onChange={(e) => setAlamat(e.target.value)}
+                />
+              </FormControl>
+              <FormControl>
+                <Select
+                  placeholder="Pilih Jenis Kelamin"
+                  value={jenisKelamin}
+                  onChange={(e) => setJenisKelamin(e.target.value)}
+                >
+                  <option value="Pria">Pria</option>
+                  <option value="Wanita">Wanita</option>
+                </Select>
+              </FormControl>
+              <Button type="submit" colorScheme="green" width="full">
+                Daftar
+              </Button>
+            </VStack>
+          </form>
+          <Text fontSize="sm">
+            Sudah punya akun?{' '}
+            <Link as={RouterLink} to="/login" color="green.500">
+              Login
+            </Link>
+          </Text>
+        </VStack>
+      </Container>
+    </Box>
   );
 };
 

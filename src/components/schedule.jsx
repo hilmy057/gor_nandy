@@ -1,12 +1,26 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
+import {
+  Box,
+  Heading,
+  Button,
+  Grid,
+  VStack,
+  HStack,
+  Text,
+  useColorModeValue,
+  Container,
+  Badge,
+} from '@chakra-ui/react';
+
+const MotionBox = motion(Box);
+const MotionButton = motion(Button);
 
 const Schedule = () => {
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [scheduleData, setScheduleData] = useState({});
   const hours = Array.from({ length: 24 }, (_, i) => `${i.toString().padStart(2, '0')}:00`);
 
-  // Fungsi untuk mendapatkan 7 hari ke depan
   const getNextSevenDays = () => {
     return Array.from({ length: 7 }, (_, i) => {
       const date = new Date(selectedDate);
@@ -15,25 +29,16 @@ const Schedule = () => {
     });
   };
 
-  // Fungsi untuk mengambil data jadwal dari server
   const fetchScheduleData = async () => {
-    // Ganti URL ini dengan endpoint API yang sesuai
     const response = await fetch('/api/schedule');
     const data = await response.json();
     setScheduleData(data);
   };
 
   useEffect(() => {
-    // Update selectedDate setiap kali komponen di-mount
     setSelectedDate(new Date());
-    
-    // Ambil data jadwal saat pertama kali komponen di-mount
     fetchScheduleData();
-
-    // Polling setiap 30 detik untuk mendapatkan data terbaru
     const intervalId = setInterval(fetchScheduleData, 30000);
-
-    // Bersihkan interval saat komponen di-unmount
     return () => clearInterval(intervalId);
   }, []);
 
@@ -46,64 +51,75 @@ const Schedule = () => {
     return date.toLocaleDateString('id-ID', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
   };
 
+  const bgColor = useColorModeValue('gray.50', 'gray.800');
+  const cardBgColor = useColorModeValue('white', 'gray.700');
+  const headingColor = useColorModeValue('green.700', 'green.200');
+
   return (
-    <div className="min-h-screen bg-gray-100 py-12 px-4 sm:px-6 lg:px-8 font-open-sans" style={{ marginTop: '60px' }}>
-      {/* Margin atas tambahan */}
-      <div className="max-w-7xl mx-auto">
-        <motion.h1 
-          className="text-3xl font-bold text-center text-green-700 mb-8"
+    <Box minH="100vh" bg={bgColor} py={12} px={4} mt="60px">
+      <Container maxW="7xl">
+        <MotionBox
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
         >
-          Jadwal Lapangan
-        </motion.h1>
+          <Heading as="h1" size="xl" textAlign="center" color={headingColor} mb={8}>
+            Jadwal Lapangan
+          </Heading>
+        </MotionBox>
 
-        <div className="mb-6 flex justify-center space-x-2 overflow-x-auto">
+        <HStack spacing={2} overflowX="auto" mb={6} justifyContent="center">
           {getNextSevenDays().map((date) => (
-            <motion.button
+            <MotionButton
               key={date.toISOString()}
-              className={`px-4 py-2 rounded-full whitespace-nowrap ${
-                selectedDate.toDateString() === date.toDateString() ? 'bg-green-500 text-white' : 'bg-white text-green-700'
-              }`}
+              size="sm"
+              variant={selectedDate.toDateString() === date.toDateString() ? 'solid' : 'outline'}
+              colorScheme="green"
               onClick={() => setSelectedDate(date)}
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
             >
               {formatDate(date)}
-            </motion.button>
+            </MotionButton>
           ))}
-        </div>
+        </HStack>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+        <Grid templateColumns={{ base: '1fr', md: 'repeat(2, 1fr)' }} gap={8}>
           {['Lapangan A', 'Lapangan B'].map((court) => (
-            <motion.div 
+            <MotionBox
               key={court}
-              className="bg-white rounded-lg shadow-md overflow-hidden"
+              bg={cardBgColor}
+              borderRadius="lg"
+              overflow="hidden"
+              boxShadow="md"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5 }}
             >
-              <h2 className="text-xl font-semibold bg-green-500 text-white p-4">{court}</h2>
-              <div className="p-4">
+              <Heading as="h2" size="lg" bg="green.500" color="white" p={4}>
+                {court}
+              </Heading>
+              <VStack spacing={2} align="stretch" p={4}>
                 {hours.map((hour) => (
-                  <div key={hour} className="flex justify-between items-center py-2 border-b last:border-b-0">
-                    <span>{hour}</span>
-                    <span 
-                      className={`px-3 py-1 rounded-full text-sm ${
-                        isBooked(court, hour) ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'
-                      }`}
+                  <HStack key={hour} justify="space-between" py={2} borderBottomWidth={1} borderColor="gray.200" _last={{ borderBottomWidth: 0 }}>
+                    <Text>{hour}</Text>
+                    <Badge
+                      colorScheme={isBooked(court, hour) ? 'red' : 'green'}
+                      variant="subtle"
+                      px={3}
+                      py={1}
+                      borderRadius="full"
                     >
                       {isBooked(court, hour) ? 'Terisi' : 'Tersedia'}
-                    </span>
-                  </div>
+                    </Badge>
+                  </HStack>
                 ))}
-              </div>
-            </motion.div>
+              </VStack>
+            </MotionBox>
           ))}
-        </div>
-      </div>
-    </div>
+        </Grid>
+      </Container>
+    </Box>
   );
 };
 

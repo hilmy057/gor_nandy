@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../service/supabaseClient';
-import Swal from 'sweetalert2';
 import {
   Box,
   Heading,
@@ -22,6 +21,10 @@ import {
   FormLabel,
   Input,
   useDisclosure,
+  Select,
+  Flex,
+  Divider,
+  useToast,
 } from '@chakra-ui/react';
 
 const Pemesanan = () => {
@@ -35,9 +38,11 @@ const Pemesanan = () => {
     jam_selesai: '',
   });
   const [totalHarga, setTotalHarga] = useState(0);
-  const { isOpen, onOpen, onClose } = useDisclosure(); // UseDisclosure hook to manage modal state
+  const { isOpen, onOpen, onClose } = useDisclosure();
   const bgColor = useColorModeValue('gray.100', 'gray.700');
   const cardBgColor = useColorModeValue('white', 'gray.800');
+  const modalBgColor = useColorModeValue('gray.50', 'gray.900');
+  const toast = useToast();
 
   useEffect(() => {
     fetchLapangan();
@@ -48,9 +53,7 @@ const Pemesanan = () => {
     setError(null);
     try {
       const { data, error } = await supabase.from('lapangan').select('*');
-
       if (error) throw error;
-
       console.log('Fetched lapangan data:', data);
       setLapangan(data);
     } catch (error) {
@@ -71,8 +74,6 @@ const Pemesanan = () => {
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setBookingData({ ...bookingData, [name]: value });
-
-    // Calculate total price whenever any input changes
     calculateTotalHarga({ ...bookingData, [name]: value });
   };
 
@@ -100,18 +101,32 @@ const Pemesanan = () => {
           lapangan_id: selectedLapangan.id,
           user_id: user.id,
           status: 'pending',
-          total_harga: totalHarga, // Pastikan ini sudah dihitung dengan benar
+          total_harga: totalHarga,
         })
         .select()
         .single();
   
       if (error) throw error;
   
-      Swal.fire('Sukses!', 'Pemesanan berhasil', 'success');
+      toast({
+        title: 'Sukses!',
+        description: 'Pemesanan berhasil',
+        status: 'success',
+        duration: 3000,
+        isClosable: true,
+        position: 'top',
+      });
       onClose();
     } catch (error) {
       console.error('Booking error:', error);
-      Swal.fire('Error!', error.message, 'error');
+      toast({
+        title: 'Error!',
+        description: error.message,
+        status: 'error',
+        duration: 3000,
+        isClosable: true,
+        position: 'top',
+      });
     }
   };
 
@@ -133,6 +148,8 @@ const Pemesanan = () => {
                 p={6}
                 borderRadius="lg"
                 boxShadow="md"
+                transition="all 0.3s"
+                _hover={{ transform: 'translateY(-5px)', boxShadow: 'lg' }}
               >
                 <VStack spacing={4} align="stretch">
                   {lap.image_url ? (
@@ -174,13 +191,13 @@ const Pemesanan = () => {
         </VStack>
       </Container>
 
-      <Modal isOpen={isOpen} onClose={onClose}>
+      <Modal isOpen={isOpen} onClose={onClose} size="md">
         <ModalOverlay />
-        <ModalContent>
-          <ModalHeader>Pesan {selectedLapangan?.nama}</ModalHeader>
+        <ModalContent bg={modalBgColor}>
+          <ModalHeader borderBottomWidth="1px" mb={4}>Pesan {selectedLapangan?.nama}</ModalHeader>
           <ModalCloseButton />
           <ModalBody>
-            <VStack spacing={4}>
+            <VStack spacing={6}>
               <FormControl isRequired>
                 <FormLabel>Tanggal</FormLabel>
                 <Input
@@ -188,34 +205,53 @@ const Pemesanan = () => {
                   name="tanggal"
                   value={bookingData.tanggal}
                   onChange={handleInputChange}
+                  bg="white"
+                  borderColor="gray.300"
                 />
               </FormControl>
-              <FormControl isRequired>
-                <FormLabel>Jam Mulai</FormLabel>
-                <Input
-                  type="time"
-                  name="jam_mulai"
-                  value={bookingData.jam_mulai}
-                  onChange={handleInputChange}
-                />
-              </FormControl>
-              <FormControl isRequired>
-                <FormLabel>Jam Selesai</FormLabel>
-                <Input
-                  type="time"
-                  name="jam_selesai"
-                  value={bookingData.jam_selesai}
-                  onChange={handleInputChange}
-                />
-              </FormControl>
-              <Text fontWeight="bold">
+              <Flex width="100%" justify="space-between">
+                <FormControl isRequired width="48%">
+                  <FormLabel>Jam Mulai</FormLabel>
+                  <Select
+                    name="jam_mulai"
+                    value={bookingData.jam_mulai}
+                    onChange={handleInputChange}
+                    bg="white"
+                    borderColor="gray.300"
+                  >
+                    {Array.from({ length: 24 }, (_, i) => (
+                      <option key={i} value={`${i.toString().padStart(2, '0')}:00`}>
+                        {`${i.toString().padStart(2, '0')}:00`}
+                      </option>
+                    ))}
+                  </Select>
+                </FormControl>
+                <FormControl isRequired width="48%">
+                  <FormLabel>Jam Selesai</FormLabel>
+                  <Select
+                    name="jam_selesai"
+                    value={bookingData.jam_selesai}
+                    onChange={handleInputChange}
+                    bg="white"
+                    borderColor="gray.300"
+                  >
+                    {Array.from({ length: 24 }, (_, i) => (
+                      <option key={i} value={`${i.toString().padStart(2, '0')}:00`}>
+                        {`${i.toString().padStart(2, '0')}:00`}
+                      </option>
+                    ))}
+                  </Select>
+                </FormControl>
+              </Flex>
+              <Divider />
+              <Text fontWeight="bold" fontSize="lg">
                 Total Harga: Rp {totalHarga.toLocaleString('id-ID')}
               </Text>
             </VStack>
           </ModalBody>
           <ModalFooter>
             <Button
-              colorScheme="blue"
+              colorScheme="green"
               mr={3}
               onClick={handleBookingSubmit}
               isDisabled={
@@ -227,7 +263,7 @@ const Pemesanan = () => {
             >
               Pesan
             </Button>
-            <Button variant="ghost" onClick={onClose}>
+            <Button variant="outline" onClick={onClose}>
               Batal
             </Button>
           </ModalFooter>

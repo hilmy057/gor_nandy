@@ -12,6 +12,9 @@ import Contact from './components/Contact';
 import Pemesanan from './components/Pemesanan';
 import Profile from './components/Profile';
 import Pembayaran from './components/Pembayaran';
+import Loading from './components/Loading';
+import { useCustomToast } from './hook/useCustomToast';
+import ErrorBoundary from './components/ErrorBoundary';
 
 // PrivateRoute component
 const PrivateRoute = ({ children }) => {
@@ -41,7 +44,7 @@ const PrivateRoute = ({ children }) => {
   }, []);
 
   if (loading) {
-    return <div>Loading...</div>; // Or a loading spinner
+    return <Loading message="Memeriksa otentikasi..." />;
   }
 
   return user ? children : <Navigate to="/login" replace />;
@@ -50,12 +53,19 @@ const PrivateRoute = ({ children }) => {
 function App() {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const { showSuccessToast, showErrorToast } = useCustomToast();
 
   useEffect(() => {
     const checkUser = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      setUser(session?.user ?? null);
-      setLoading(false);
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        setUser(session?.user ?? null);
+        setLoading(false);
+      } catch (error) {
+        console.error('Error checking auth state:', error);
+        showErrorToast('Terjadi kesalahan', 'Gagal memeriksa status otentikasi');
+        setLoading(false);
+      }
     };
     checkUser();
 
@@ -63,6 +73,12 @@ function App() {
       async (event, session) => {
         setUser(session?.user ?? null);
         setLoading(false);
+
+        if (event === 'SIGNED_IN') {
+          showSuccessToast('Login berhasil!', `Selamat datang, ${session.user.email}`);
+        } else if (event === 'SIGNED_OUT') {
+          showSuccessToast('Logout berhasil', 'Sampai jumpa lagi!');
+        }
       }
     );
 
@@ -71,51 +87,54 @@ function App() {
         authListener.subscription.unsubscribe();
       }
     };
-  }, []);
+  }, [showSuccessToast, showErrorToast]);
 
   if (loading) {
-    return <div>Loading...</div>; // Or a loading spinner
+    return <Loading message="Memuat aplikasi..." />;
   }
 
   return (
     <ChakraProvider>
-      <Router>
-        <Box className="App">
-          <Navbar user={user} />
-          <Box pt="64px">
-            <Routes>
-              {/* Public routes */}
-              <Route path="/" element={<Home />} />
-              <Route path="/beranda" element={<Home />} />
-              <Route path="/login" element={<Login />} />
-              <Route path="/register" element={<Register />} />
-              <Route path="/tentang" element={<AboutUs />} />
-              <Route path="/jadwal" element={<Schedule />} />
-              <Route path="/kontak" element={<Contact />} />
+      <ErrorBoundary>
+        <Router>
+          <Box className="App">
+            <Navbar user={user} />
+      
+            <Box pt="64px">
+              <Routes>
+                {/* Public routes */}
+                <Route path="/" element={<Home user={user} />} />
+                <Route path="/beranda" element={<Home user={user} />} />
+                <Route path="/login" element={<Login />} />
+                <Route path="/register" element={<Register />} />
+                <Route path="/tentang" element={<AboutUs />} />
+                <Route path="/jadwal" element={<Schedule />} />
+                <Route path="/kontak" element={<Contact />} />
 
-              {/* Private routes */}
-              <Route path="/pemesanan" element={
-                <PrivateRoute>
-                  <Pemesanan />
-                </PrivateRoute>
-              } />
-              <Route path="/pembayaran" element={
-                <PrivateRoute>
-                  <Pembayaran />
-                </PrivateRoute>
-              } />
-              <Route path="/profile" element={
-                <PrivateRoute>
-                  <Profile />
-                </PrivateRoute>
-              } />
+                {/* Private routes */}
+                <Route path="/pemesanan" element={
+                  <PrivateRoute>
+                    <Pemesanan />
+                  </PrivateRoute>
+                } />
+                <Route path="/pembayaran" element={
+                  <PrivateRoute>
+                    <Pembayaran />
+                  </PrivateRoute>
+                } />
+                <Route path="/profile" element={
+                  <PrivateRoute>
+                    <Profile />
+                  </PrivateRoute>
+                } />
 
-              {/* Catch-all route for unknown paths */}
-              <Route path="*" element={<Navigate to="/" replace />} />
-            </Routes>
+                {/* Catch-all route for unknown paths */}
+                <Route path="*" element={<Navigate to="/" replace />} />
+              </Routes>
+            </Box>
           </Box>
-        </Box>
-      </Router>
+        </Router>
+      </ErrorBoundary>
     </ChakraProvider>
   );
 }

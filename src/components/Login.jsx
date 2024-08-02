@@ -43,16 +43,7 @@
 
     const handleLogin = async (e) => {
       e.preventDefault();
-      if (!email || !password) {
-        toast({
-          title: 'Error',
-          description: 'Harap isi semua field',
-          status: 'error',
-          duration: 3000,
-          isClosable: true,
-        });
-        return;
-      }
+     
     
       setIsLoading(true);
     
@@ -73,23 +64,11 @@
           localStorage.removeItem('savedEmail');
         }
 
-        toast({
-          title: 'Sukses',
-          description: 'Login berhasil',
-          status: 'success',
-          duration: 3000,
-          isClosable: true,
-        });
+        
         navigate('/beranda');
       } catch (error) {
         console.error('Login error:', error);
-        toast({
-          title: 'Error',
-          description: error.message || 'Terjadi kesalahan saat login',
-          status: 'error',
-          duration: 3000,
-          isClosable: true,
-        });
+        
       } finally {
         setIsLoading(false);
       }

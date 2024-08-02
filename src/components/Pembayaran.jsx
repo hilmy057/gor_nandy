@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../service/supabaseClient';
+import Confetti from 'react-confetti';
 import {
   Box,
   Heading,
@@ -23,7 +24,94 @@ import {
   Stack,
   Input,
   Image,
+  Divider,
+  FormLabel,
+  Icon,
 } from '@chakra-ui/react';
+import { FaUpload } from 'react-icons/fa';
+
+const PaymentModal = ({ isOpen, onClose, onConfirm, selectedPaymentMethod, setSelectedPaymentMethod }) => {
+  const [buktiPembayaran, setBuktiPembayaran] = useState(null);
+
+  const handleFileUpload = (event) => {
+    const file = event.target.files[0];
+    setBuktiPembayaran(file);
+  };
+
+  return (
+    <Modal isOpen={isOpen} onClose={onClose} size="lg">
+      <ModalOverlay />
+      <ModalContent borderRadius="xl" bg="green.50">
+        <ModalHeader bg="green.500" color="white" borderTopRadius="xl" py={6} textAlign="center" fontSize="2xl">
+          Pilih Metode Pembayaran
+        </ModalHeader>
+        <ModalBody p={8}>
+          <VStack spacing={8} align="stretch">
+            <RadioGroup onChange={setSelectedPaymentMethod} value={selectedPaymentMethod}>
+              <Stack direction="column" spacing={4}>
+                <Radio value="transfer_bank" colorScheme="green" size="lg">
+                  <Text fontSize="lg" fontWeight="medium">Transfer Bank</Text>
+                </Radio>
+                <Radio value="qris" colorScheme="green" size="lg">
+                  <Text fontSize="lg" fontWeight="medium">QRIS</Text>
+                </Radio>
+              </Stack>
+            </RadioGroup>
+            <Divider borderColor="green.200" />
+            {selectedPaymentMethod === 'transfer_bank' && (
+              <Box bg="white" p={6} borderRadius="md" boxShadow="md" border="1px" borderColor="green.200">
+                <Text fontSize="lg" fontWeight="bold" mb={3} color="green.600">Silakan transfer ke rekening berikut:</Text>
+                <Text fontSize="md">Bank XYZ: 1234-5678-9012</Text>
+                <Text fontSize="md">Atas nama: PT Lapangan Futsal</Text>
+              </Box>
+            )}
+            {selectedPaymentMethod === 'qris' && (
+              <Box bg="white" p={6} borderRadius="md" boxShadow="md" alignItems="center" display="flex" flexDirection="column" border="1px" borderColor="green.200">
+                <Image src="https://via.placeholder.com/150" alt="QRIS Code" borderRadius="md" boxSize="200px" />
+                <Text mt={4} fontSize="lg" fontWeight="bold" color="green.600">Scan QRIS untuk membayar</Text>
+              </Box>
+            )}
+            <Box>
+              <FormLabel htmlFor="file-upload" fontWeight="bold" fontSize="lg" color="green.600">
+                Unggah Bukti Pembayaran:
+              </FormLabel>
+              <Button
+                as="label"
+                htmlFor="file-upload"
+                colorScheme="green"
+                variant="outline"
+                leftIcon={<Icon as={FaUpload} />}
+                cursor="pointer"
+                mb={2}
+                _hover={{ bg: 'green.100' }}
+              >
+                Pilih File
+              </Button>
+              <Input
+                type="file"
+                id="file-upload"
+                onChange={handleFileUpload}
+                accept="image/*"
+                display="none"
+              />
+              {buktiPembayaran && (
+                <Text fontSize="sm" color="green.600">
+                  File terpilih: {buktiPembayaran.name}
+                </Text>
+              )}
+            </Box>
+          </VStack>
+        </ModalBody>
+        <ModalFooter bg="green.100" borderBottomRadius="xl">
+          <Button colorScheme="green" mr={3} onClick={() => onConfirm(buktiPembayaran)}>
+            Konfirmasi Pembayaran
+          </Button>
+          <Button variant="outline" colorScheme="green" onClick={onClose}>Batal</Button>
+        </ModalFooter>
+      </ModalContent>
+    </Modal>
+  );
+};
 
 const Pembayaran = () => {
   const [pemesanan, setPemesanan] = useState([]);
@@ -31,21 +119,20 @@ const Pembayaran = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState('');
   const [selectedPemesanan, setSelectedPemesanan] = useState(null);
-  const [buktiPembayaran, setBuktiPembayaran] = useState(null);
-  const bgColor = useColorModeValue('gray.100', 'gray.700');
-  const cardBgColor = useColorModeValue('white', 'gray.800');
+  const [showConfetti, setShowConfetti] = useState(false);
+  const bgColor = useColorModeValue('green.50', 'green.900');
+  const cardBgColor = useColorModeValue('white', 'green.800');
   const toast = useToast();
 
   useEffect(() => {
     fetchPemesanan();
   }, []);
 
+
   const fetchPemesanan = async () => {
     try {
       setIsLoading(true);
       const { data: { user } } = await supabase.auth.getUser();
-      console.log('Current user:', user); // Log user
-
       if (!user) throw new Error('User not authenticated');
 
       const { data, error } = await supabase
@@ -55,13 +142,17 @@ const Pembayaran = () => {
           lapangan (nama, harga_per_jam)
         `)
         .eq('user_id', user.id)
-        .eq('status', 'pending')
         .order('created_at', { ascending: false });
 
-      console.log('Fetched pemesanan:', data); // Log fetched data
-
       if (error) throw error;
-      setPemesanan(data);
+
+      // Ensure all pemesanan have a valid status
+      const updatedPemesanan = data.map(pesan => ({
+        ...pesan,
+        status: pesan.status || 'belum_dibayar'
+      }));
+
+      setPemesanan(updatedPemesanan);
     } catch (error) {
       console.error('Error fetching pemesanan:', error);
       toast({
@@ -76,17 +167,38 @@ const Pembayaran = () => {
     }
   };
 
+  const getStatusColor = (status) => {
+    switch (status) {
+      case 'berhasil':
+        return 'green';
+      case 'menunggu_konfirmasi':
+        return 'yellow';
+      case 'belum_dibayar':
+        return 'red';
+      default:
+        return 'gray';
+    }
+  };
+
+  const getStatusText = (status) => {
+    switch (status) {
+      case 'berhasil':
+        return 'Pembayaran Berhasil';
+      case 'menunggu_konfirmasi':
+        return 'Menunggu Konfirmasi';
+      case 'belum_dibayar':
+        return 'Belum Dibayar';
+      default:
+        return 'Menunggu Pembayaran';
+    }
+  };
+
   const handleBayar = (pesan) => {
     setSelectedPemesanan(pesan);
     setIsModalOpen(true);
   };
 
-  const handleFileUpload = (event) => {
-    const file = event.target.files[0];
-    setBuktiPembayaran(file);
-  };
-
-  const handleConfirmPayment = async () => {
+  const handleConfirmPayment = async (buktiPembayaran) => {
     if (!selectedPaymentMethod) {
       toast({
         title: 'Error',
@@ -123,7 +235,7 @@ const Pembayaran = () => {
       const { data, error } = await supabase
         .from('pemesanan')
         .update({ 
-          status: 'paid',
+          status: 'menunggu_konfirmasi',
           metode_pembayaran: selectedPaymentMethod,
           bukti_pembayaran: filePath
         })
@@ -134,8 +246,8 @@ const Pembayaran = () => {
       if (error) throw error;
 
       toast({
-        title: 'Pembayaran Berhasil',
-        description: 'Status pemesanan telah diperbarui',
+        title: 'Pembayaran Berhasil Diunggah',
+        description: 'Menunggu konfirmasi dari admin',
         status: 'success',
         duration: 3000,
         isClosable: true,
@@ -143,13 +255,16 @@ const Pembayaran = () => {
 
       setIsModalOpen(false);
       setSelectedPaymentMethod('');
-      setBuktiPembayaran(null);
       fetchPemesanan(); // Refresh the list
+
+      // Trigger confetti effect
+      setShowConfetti(true);
+      setTimeout(() => setShowConfetti(false), 5000); // Stop confetti after 5 seconds
     } catch (error) {
       console.error('Error updating pemesanan:', error);
       toast({
         title: 'Error',
-        description: 'Gagal melakukan pembayaran',
+        description: 'Gagal mengunggah pembayaran',
         status: 'error',
         duration: 3000,
         isClosable: true,
@@ -167,6 +282,7 @@ const Pembayaran = () => {
 
   return (
     <Box bg={bgColor} minH="100vh">
+      {showConfetti && <Confetti />}
       <Container maxW="container.xl" py={10}>
         <VStack spacing={8} align="stretch">
           <Heading as="h1" size="xl" textAlign="center">
@@ -174,7 +290,7 @@ const Pembayaran = () => {
           </Heading>
           {pemesanan.length === 0 ? (
             <Text textAlign="center" fontSize="lg">
-              Tidak ada pemesanan yang perlu dibayar saat ini.
+              Tidak ada data pemesanan saat ini.
             </Text>
           ) : (
             <SimpleGrid columns={{ base: 1, md: 2, lg: 3 }} spacing={6}>
@@ -202,15 +318,16 @@ const Pembayaran = () => {
                     <Text>
                       <strong>Total Harga:</strong> Rp {pesan.total_harga.toLocaleString('id-ID')}
                     </Text>
-                    <Badge colorScheme={pesan.status === 'paid' ? 'green' : 'yellow'}>
-                      {pesan.status === 'paid' ? 'Pembayaran Selesai' : 'Menunggu Pembayaran'}
+                    <Badge colorScheme={getStatusColor(pesan.status)}>
+                      {getStatusText(pesan.status)}
                     </Badge>
                     <Button
-                      colorScheme="green"
+                      colorScheme={pesan.status === 'berhasil' ? 'green' : 'blue'}
                       onClick={() => handleBayar(pesan)}
-                      isDisabled={pesan.status === 'paid'}
+                      isDisabled={pesan.status === 'berhasil' || pesan.status === 'menunggu_konfirmasi'}
                     >
-                      {pesan.status === 'paid' ? 'Pembayaran Selesai' : 'Bayar Sekarang'}
+                      {pesan.status === 'berhasil' ? 'Berhasil' : 
+                       pesan.status === 'menunggu_konfirmasi' ? 'Menunggu Konfirmasi' : 'Bayar Sekarang'}
                     </Button>
                   </VStack>
                 </Box>
@@ -220,42 +337,13 @@ const Pembayaran = () => {
         </VStack>
       </Container>
 
-      <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)}>
-        <ModalOverlay />
-        <ModalContent>
-          <ModalHeader>Pilih Metode Pembayaran</ModalHeader>
-          <ModalBody>
-            <RadioGroup onChange={setSelectedPaymentMethod} value={selectedPaymentMethod}>
-              <Stack direction="column">
-                <Radio value="transfer_bank">Transfer Bank</Radio>
-                <Radio value="qris">QRIS</Radio>
-              </Stack>
-            </RadioGroup>
-            {selectedPaymentMethod === 'transfer_bank' && (
-              <Box mt={4}>
-                <Text>Silakan transfer ke rekening berikut:</Text>
-                <Text>Bank XYZ: 1234-5678-9012</Text>
-                <Text>Atas nama: PT Lapangan Futsal</Text>
-              </Box>
-            )}
-            {selectedPaymentMethod === 'qris' && (
-              <Box mt={4}>
-                <Image src="https://via.placeholder.com/150" alt="QRIS Code" />
-              </Box>
-            )}
-            <Box mt={4}>
-              <Text mb={2}>Unggah Bukti Pembayaran:</Text>
-              <Input type="file" onChange={handleFileUpload} accept="image/*" />
-            </Box>
-          </ModalBody>
-          <ModalFooter>
-            <Button colorScheme="blue" mr={3} onClick={handleConfirmPayment}>
-              Konfirmasi Pembayaran
-            </Button>
-            <Button variant="ghost" onClick={() => setIsModalOpen(false)}>Batal</Button>
-          </ModalFooter>
-        </ModalContent>
-      </Modal>
+      <PaymentModal 
+        isOpen={isModalOpen} 
+        onClose={() => setIsModalOpen(false)}
+        onConfirm={handleConfirmPayment}
+        selectedPaymentMethod={selectedPaymentMethod}
+        setSelectedPaymentMethod={setSelectedPaymentMethod}
+      />
     </Box>
   );
 };

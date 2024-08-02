@@ -1,5 +1,5 @@
-import React from 'react';
-import { Link as RouterLink, useLocation } from 'react-router-dom';
+import React, { useMemo } from 'react';
+import { Link as RouterLink, useLocation, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { supabase } from '../service/supabaseClient';
 import {
@@ -17,27 +17,89 @@ import {
   HStack,
   Avatar,
   IconButton,
+  VStack,
+  Drawer,
+  DrawerBody,
+  DrawerHeader,
+  DrawerOverlay,
+  DrawerContent,
+  DrawerCloseButton,
+  useDisclosure,
+  useBreakpointValue,
 } from '@chakra-ui/react';
+import { HamburgerIcon } from '@chakra-ui/icons';
 
 const MotionBox = motion(Box);
 const MotionText = motion(Text);
 const MotionButton = motion(Button);
 
-const Navbar = ({ user }) => {
+const Navbar = ({ user, setUser }) => {
   const location = useLocation();
+  const navigate = useNavigate();
   const currentPath = location.pathname.substring(1);
+  const { isOpen, onOpen, onClose } = useDisclosure();
+  const isMobile = useBreakpointValue({ base: true, md: false });
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
+    setUser(null);
+    navigate('/');
   };
 
-  const navItems = user
-    ? ['Beranda', 'Pemesanan', 'Pembayaran']
-    : ['Beranda', 'Tentang', 'Jadwal', 'Kontak'];
+  const navItems = useMemo(() => {
+    const baseItems = ['Beranda', 'Tentang', 'Jadwal', 'Kontak'];
+    return user 
+      ? ['Beranda', 'Pemesanan', 'Pembayaran']
+      : baseItems;
+  }, [user]);
 
   const bgColor = useColorModeValue('white', 'gray.800');
   const textColor = useColorModeValue('gray.700', 'gray.200');
   const hoverColor = useColorModeValue('green.500', 'green.300');
+
+  const NavItems = ({ isMobile = false }) => (
+    <>
+      {navItems.map((item) => {
+        const path = item.toLowerCase().replace(' ', '-');
+        const isActive = currentPath === path;
+
+        return (
+          <MotionBox
+            key={item}
+            initial={{ y: -20, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            transition={{ delay: 0.1, duration: 0.5 }}
+          >
+            <Link
+              as={RouterLink}
+              to={`/${path}`}
+              color={isActive ? 'green.500' : textColor}
+              fontWeight={isActive ? 'semibold' : 'medium'}
+              position="relative"
+              _hover={{ color: hoverColor }}
+              transition="color 0.3s"
+              onClick={isMobile ? onClose : undefined}
+            >
+              {item}
+              {isActive && !isMobile && (
+                <MotionBox
+                  position="absolute"
+                  bottom="-2px"
+                  left={0}
+                  width="100%"
+                  height="2px"
+                  bg="green.500"
+                  layoutId="underline"
+                  initial={false}
+                  transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                />
+              )}
+            </Link>
+          </MotionBox>
+        );
+      })}
+    </>
+  );
 
   return (
     <Box
@@ -63,74 +125,80 @@ const Navbar = ({ user }) => {
           >
             Gor Nandy
           </MotionText>
-          <HStack spacing={8}>
-            {navItems.map((item) => {
-              const path = item.toLowerCase().replace(' ', '-');
-              const isActive = currentPath === path;
+          
+          {!isMobile && (
+            <HStack spacing={8}>
+              <NavItems />
+            </HStack>
+          )}
 
-              return (
-                <MotionBox
-                  key={item}
-                  initial={{ y: -20, opacity: 0 }}
-                  animate={{ y: 0, opacity: 1 }}
-                  transition={{ delay: 0.1, duration: 0.5 }}
-                >
-                  <Link
-                    as={RouterLink}
-                    to={`/${path}`}
-                    color={isActive ? 'green.500' : textColor}
-                    fontWeight={isActive ? 'semibold' : 'medium'}
-                    position="relative"
-                    _hover={{ color: hoverColor }}
-                    transition="color 0.3s"
-                  >
-                    {item}
-                    {isActive && (
-                      <MotionBox
-                        position="absolute"
-                        bottom="-2px"
-                        left={0}
-                        width="100%"
-                        height="2px"
-                        bg="green.500"
-                        layoutId="underline"
-                        initial={false}
-                        transition={{ type: "spring", stiffness: 300, damping: 30 }}
-                      />
-                    )}
-                  </Link>
-                </MotionBox>
-              );
-            })}
-          </HStack>
-          {user ? (
-            <Menu>
-              <MenuButton
-                as={IconButton}
-                aria-label="User menu"
-                icon={<Avatar size="sm" name={user.nama_lengkap} src={user.avatar_url} />}
-                variant="ghost"
-                _hover={{ bg: 'green.50' }}
-              />
-              <MenuList>
-                <MenuItem as={RouterLink} to="/profile">Profile</MenuItem>
-                <MenuItem onClick={handleLogout}>Logout</MenuItem>
-              </MenuList>
-            </Menu>
+          {isMobile ? (
+            <IconButton
+              icon={<HamburgerIcon />}
+              aria-label="Open menu"
+              variant="ghost"
+              onClick={onOpen}
+            />
           ) : (
-            <Link as={RouterLink} to="/login">
-              <MotionButton
-                colorScheme="green"
-                variant="outline"
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-              >
-                Masuk
-              </MotionButton>
-            </Link>
+            user ? (
+              <Flex align="center">
+                <HStack spacing={4} mr={4}>
+                  <NavItems />
+                </HStack>
+                <Menu>
+                  <MenuButton
+                    as={IconButton}
+                    aria-label="User menu"
+                    icon={<Avatar size="sm" name={user.user_metadata.nama_lengkap} src={user.user_metadata.avatar_url} />}
+                    variant="ghost"
+                    _hover={{ bg: 'green.50' }}
+                  />
+                  <MenuList>
+                    <MenuItem as={RouterLink} to="/profile">Profile</MenuItem>
+                    <MenuItem onClick={handleLogout}>Logout</MenuItem>
+                  </MenuList>
+                </Menu>
+              </Flex>
+            ) : (
+              <Link as={RouterLink} to="/login">
+                <MotionButton
+                  colorScheme="green"
+                  variant="outline"
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                >
+                  Masuk
+                </MotionButton>
+              </Link>
+            )
           )}
         </Flex>
       </Container>
+
+      {isMobile && (
+        <Drawer isOpen={isOpen} placement="left" onClose={onClose}>
+          <DrawerOverlay />
+          <DrawerContent>
+            <DrawerCloseButton />
+            <DrawerHeader>Menu</DrawerHeader>
+            <DrawerBody>
+              <VStack spacing={4} align="stretch">
+                <NavItems isMobile />
+                {user ? (
+                  <>
+                    <Link as={RouterLink} to="/profile" onClick={onClose}>Profile</Link>
+                    <Button onClick={() => { handleLogout(); onClose(); }}>Logout</Button>
+                  </>
+                ) : (
+                  <Link as={RouterLink} to="/login" onClick={onClose}>
+                    <Button colorScheme="green" width="full">Masuk</Button>
+                  </Link>
+                )}
+              </VStack>
+            </DrawerBody>
+          </DrawerContent>
+        </Drawer>
+      )}
     </Box>
   );
 };

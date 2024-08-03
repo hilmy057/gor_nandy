@@ -1,146 +1,169 @@
-import React, { useState, useEffect } from 'react';
-import { Link, useLocation } from 'react-router-dom';
-import { motion } from 'framer-motion';
+import React, { useCallback, useMemo } from 'react';
+import { Link as RouterLink, useLocation, useNavigate } from 'react-router-dom';
 import { supabase } from '../service/supabaseClient';
+import {
+  Box,
+  Flex,
+  Text,
+  Button,
+  Link,
+  Menu,
+  MenuButton,
+  MenuList,
+  MenuItem,
+  useColorModeValue,
+  Container,
+  HStack,
+  Avatar,
+  IconButton,
+  useDisclosure,
+  Stack,
+} from '@chakra-ui/react';
+import { HamburgerIcon, CloseIcon } from '@chakra-ui/icons';
 
-const Navbar = () => {
+const NavLink = React.memo(({ to, children, onClick }) => {
   const location = useLocation();
-  const currentPath = location.pathname.substring(1);
-  const [user, setUser] = useState(null);
-  const [showDropdown, setShowDropdown] = useState(false);
+  const bgColor = useColorModeValue('green.100', 'green.700');
+  
+  return (
+    <Link
+      as={RouterLink}
+      to={to}
+      px={3}
+      py={2}
+      rounded={'md'}
+      _hover={{
+        textDecoration: 'none',
+        bg: bgColor,
+        color: 'green.600',
+      }}
+      bg={location.pathname === to ? bgColor : 'transparent'}
+      fontWeight={location.pathname === to ? 'bold' : 'normal'}
+      onClick={onClick}
+      transition="all 0.3s"
+    >
+      {children}
+    </Link>
+  );
+});
 
-  useEffect(() => {
-    const fetchUser = async () => {
-      const { data: sessionData } = await supabase.auth.getSession();
-      console.log('Session Data in Navbar:', sessionData);
-  
-      if (sessionData.session) {
-        const { data: userData, error } = await supabase
-          .from('users')
-          .select('*')
-          .eq('id', sessionData.session.user.id)
-          .single();
-  
-        if (error) {
-          console.error('Error fetching user data:', error);
-        } else {
-          console.log('User Data:', userData);
-          setUser(userData);
-        }
-      } else {
-        setUser(null);
-      }
-    };
-  
-    fetchUser();
-  
-    const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
-      console.log('Auth State Change Event:', event);
-      if (session) {
-        const { data: userData, error } = await supabase
-          .from('users')
-          .select('*')
-          .eq('id', session.user.id)
-          .single();
-  
-        if (error) {
-          console.error('Error fetching user data:', error);
-        } else {
-          console.log('User Data:', userData);
-          setUser(userData);
-        }
-      } else {
-        setUser(null);
-      }
-    });
-  
-    return () => {
-      if (authListener && authListener.subscription) {
-        authListener.subscription.unsubscribe();
-      }
-    };
-  }, []);
-  
+const Navbar = React.memo(({ user, setUser }) => {
+  const location = useLocation();
+  const navigate = useNavigate();
+  const { isOpen, onToggle } = useDisclosure();
 
-  const handleLogout = async () => {
+  const handleLogout = useCallback(async () => {
     await supabase.auth.signOut();
-    setShowDropdown(false);
-  };
+    setUser(null);
+    navigate('/');
+  }, [setUser, navigate]);
 
-  const navItems = user
-    ? ['Beranda', 'Pemesanan', 'Pembayaran']
-    : ['Beranda', 'Tentang', 'Jadwal', 'Kontak'];
+  const bgColor = useColorModeValue('green.50', 'green.900');
+  const textColor = useColorModeValue('green.800', 'green.100');
+
+  const navItems = useMemo(() => 
+    user
+      ? [
+          { label: 'Beranda', href: '/beranda' },
+          { label: 'Pemesanan', href: '/pemesanan' },
+          { label: 'Pembayaran', href: '/pembayaran' },
+        ]
+      : [
+          { label: 'Beranda', href: '/' },
+          { label: 'Tentang', href: '/tentang' },
+          { label: 'Jadwal', href: '/jadwal' },
+          { label: 'Kontak', href: '/kontak' },
+        ],
+    [user]
+  );
+
+  const renderNavItems = useCallback(() => 
+    navItems.map((navItem) => (
+      <NavLink key={navItem.label} to={navItem.href} onClick={onToggle}>
+        {navItem.label}
+      </NavLink>
+    )),
+    [navItems, onToggle]
+  );
 
   return (
-    <nav className="bg-white bg-opacity-90 backdrop-blur-sm fixed top-0 left-0 right-0 z-50 p-4 flex justify-between items-center shadow-md w-full font-open-sans">
-      <motion.div 
-        className="text-xl font-bold text-green-600"
-        initial={{ x: -50, opacity: 0 }}
-        animate={{ x: 0, opacity: 1 }}
-        transition={{ duration: 0.5 }}
-      >
-        Gor Nandy
-      </motion.div>
-      <div className="relative flex space-x-4">
-        {navItems.map((item) => {
-          const path = item.toLowerCase().replace(' ', '-');
-          const isActive = currentPath === path;
-
-          return (
-            <motion.span
-              key={item}
-              initial={{ y: -20, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              transition={{ delay: 0.1, duration: 0.5 }}
-            >
-              <Link 
-                to={`/${path}`} 
-                className={`relative text-green-700 hover:text-green-500 transition-colors duration-300 ${isActive ? 'font-bold' : ''}`}
-              >
-                {item}
-                {isActive && (
-                  <motion.span
-                    className="absolute bottom-0 left-0 w-full h-0.5 bg-green-600 rounded-t-md"
-                    layoutId="underline"
-                    initial={false}
-                    transition={{ type: "spring", stiffness: 300, damping: 30 }}
+    <Box bg={bgColor} px={4} position="fixed" top={0} left={0} right={0} zIndex={1000} boxShadow="md">
+      <Container maxW={'6xl'}>
+        <Flex h={20} alignItems={'center'} justifyContent={'space-between'}>
+          <IconButton
+            size={'md'}
+            icon={isOpen ? <CloseIcon /> : <HamburgerIcon />}
+            aria-label={'Open Menu'}
+            display={{ md: 'none' }}
+            onClick={onToggle}
+            variant="outline"
+            colorScheme="green"
+          />
+          <HStack spacing={8} alignItems={'center'}>
+            <Box>
+              <Text fontSize="2xl" fontWeight="bold" color="green.500">
+                Gor Nandy
+              </Text>
+            </Box>
+            <HStack as={'nav'} spacing={6} display={{ base: 'none', md: 'flex' }}>
+              {renderNavItems()}
+            </HStack>
+          </HStack>
+          <Flex alignItems={'center'}>
+            {user ? (
+              <Menu>
+                <MenuButton
+                  as={Button}
+                  rounded={'full'}
+                  variant={'link'}
+                  cursor={'pointer'}
+                  minW={0}
+                >
+                  <Avatar
+                    size={'sm'}
+                    src={user.user_metadata?.avatar_url}
+                    name={user.user_metadata?.nama_lengkap}
                   />
-                )}
-              </Link>
-            </motion.span>
-          );
-        })}
-      </div>
-      {user ? (
-  <div className="relative">
-    <motion.button 
-      className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 transition-colors duration-300"
-      whileHover={{ scale: 1.05 }}
-      whileTap={{ scale: 0.95 }}
-      onClick={() => setShowDropdown(!showDropdown)}
-    >
-      {user.nama_lengkap || 'Profil'}
-    </motion.button>
-    {showDropdown && (
-      <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-xl z-20">
-        <Link to="/profile" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Profile</Link>
-        <button onClick={handleLogout} className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Logout</button>
-      </div>
-    )}
-  </div>
-      ) : (
-        <Link to="/login">
-          <motion.button 
-            className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 transition-colors duration-300"
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-          >
-            Masuk
-          </motion.button>
-        </Link>
-      )}
-    </nav>
+                </MenuButton>
+                <MenuList>
+                  <MenuItem as={RouterLink} to="/profile" color={textColor}>
+                    Profil
+                  </MenuItem>
+                  <MenuItem onClick={handleLogout} color={textColor}>Keluar</MenuItem>
+                </MenuList>
+              </Menu>
+            ) : (
+              <Button
+                as={RouterLink}
+                to="/login"
+                fontSize={'sm'}
+                fontWeight={600}
+                color={'white'}
+                bg={'green.400'}
+                _hover={{
+                  bg: 'green.500',
+                }}
+                _active={{
+                  bg: 'green.600',
+                }}
+                transition="all 0.3s"
+              >
+                Masuk
+              </Button>
+            )}
+          </Flex>
+        </Flex>
+
+        {isOpen ? (
+          <Box pb={4} display={{ md: 'none' }}>
+            <Stack as={'nav'} spacing={4}>
+              {renderNavItems()}
+            </Stack>
+          </Box>
+        ) : null}
+      </Container>
+    </Box>
   );
-};
+});
 
 export default Navbar;

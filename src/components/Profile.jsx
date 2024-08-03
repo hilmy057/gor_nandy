@@ -1,9 +1,21 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../service/supabaseClient';
 import Swal from 'sweetalert2';
+import {
+  Box,
+  VStack,
+  Heading,
+  FormControl,
+  FormLabel,
+  Input,
+  Button,
+  Container,
+  useToast,
+} from '@chakra-ui/react';
 
 const Profile = () => {
   const [user, setUser] = useState(null);
+  const toast = useToast();
 
   useEffect(() => {
     fetchUser();
@@ -28,21 +40,44 @@ const Profile = () => {
       .from('users')
       .update(user)
       .eq('id', user.id);
-    if (error) Swal.fire('Error!', error.message, 'error');
-    else Swal.fire('Sukses!', 'Profile updated', 'success');
+    if (error) {
+      toast({
+        title: 'Error!',
+        description: error.message,
+        status: 'error',
+        duration: 3000,
+        isClosable: true,
+      });
+    } else {
+      toast({
+        title: 'Sukses!',
+        description: 'Profile updated',
+        status: 'success',
+        duration: 3000,
+        isClosable: true,
+      });
+    }
   };
 
-  if (!user) return <div>Loading...</div>;
+  if (!user) return <Box>Loading...</Box>;
 
   return (
-    <form onSubmit={handleUpdate}>
-      <input
-        value={user.nama_lengkap}
-        onChange={(e) => setUser({...user, nama_lengkap: e.target.value})}
-      />
-      {/* Tambahkan field lainnya */}
-      <button type="submit">Update Profile</button>
-    </form>
+    <Container maxW="container.md" py={8}>
+      <VStack spacing={8} as="form" onSubmit={handleUpdate}>
+        <Heading>Profil Pengguna</Heading>
+        <FormControl>
+          <FormLabel>Nama Lengkap</FormLabel>
+          <Input
+            value={user.nama_lengkap}
+            onChange={(e) => setUser({...user, nama_lengkap: e.target.value})}
+          />
+        </FormControl>
+        {/* Tambahkan field lainnya */}
+        <Button type="submit" colorScheme="green" width="full">
+          Update Profile
+        </Button>
+      </VStack>
+    </Container>
   );
 };
 

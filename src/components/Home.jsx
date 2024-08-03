@@ -1,12 +1,20 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
+import TataCaraModal from './TataCaraModal'; // Import the new modal component
 
-const Home = () => {
+const Home = ({ user }) => {
   const navigate = useNavigate();
+  const [isModalOpen, setIsModalOpen] = useState(false);
   
   const handleButtonClick = () => {
-    navigate('/login');
+    if (user) {
+      // Open the Tata Cara modal when user is logged in
+      setIsModalOpen(true);
+    } else {
+      // Navigate to login page when user is not logged in
+      navigate('/login');
+    }
   };
 
   return (
@@ -49,11 +57,14 @@ const Home = () => {
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
             >
-              Pesan Sekarang
+              {user ? "Tata Cara" : "Pesan Sekarang"}
             </motion.button>
           </motion.div>
         </div>
       </div>
+
+      {/* Tata Cara Modal */}
+      <TataCaraModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
     </div>
   );
 };

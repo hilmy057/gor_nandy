@@ -128,7 +128,6 @@ const Pembayaran = () => {
     fetchPemesanan();
   }, []);
 
-
   const fetchPemesanan = async () => {
     try {
       setIsLoading(true);
@@ -146,7 +145,6 @@ const Pembayaran = () => {
 
       if (error) throw error;
 
-      // Ensure all pemesanan have a valid status
       const updatedPemesanan = data.map(pesan => ({
         ...pesan,
         status: pesan.status || 'belum_dibayar'
@@ -255,11 +253,10 @@ const Pembayaran = () => {
 
       setIsModalOpen(false);
       setSelectedPaymentMethod('');
-      fetchPemesanan(); // Refresh the list
+      fetchPemesanan();
 
-      // Trigger confetti effect
       setShowConfetti(true);
-      setTimeout(() => setShowConfetti(false), 5000); // Stop confetti after 5 seconds
+      setTimeout(() => setShowConfetti(false), 5000);
     } catch (error) {
       console.error('Error updating pemesanan:', error);
       toast({
@@ -322,9 +319,10 @@ const Pembayaran = () => {
                       {getStatusText(pesan.status)}
                     </Badge>
                     <Button
-                      colorScheme={pesan.status === 'berhasil' ? 'green' : 'blue'}
+                      colorScheme="green"
                       onClick={() => handleBayar(pesan)}
                       isDisabled={pesan.status === 'berhasil' || pesan.status === 'menunggu_konfirmasi'}
+                      _disabled={{ bg: "green.300", opacity: 0.6 }}
                     >
                       {pesan.status === 'berhasil' ? 'Berhasil' : 
                        pesan.status === 'menunggu_konfirmasi' ? 'Menunggu Konfirmasi' : 'Bayar Sekarang'}

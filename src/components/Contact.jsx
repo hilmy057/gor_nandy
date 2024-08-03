@@ -13,19 +13,23 @@ import {
   InputGroup,
   InputLeftElement,
   AspectRatio,
+  useColorModeValue,
 } from '@chakra-ui/react';
 import { FaUser, FaEnvelope, FaPhone } from 'react-icons/fa';
 
 const Contact = () => {
+  const bgColor = useColorModeValue('green.50', 'green.900'); // Background color for light and dark mode
+  const cardBgColor = useColorModeValue('white', 'green.800'); // Card background color for light and dark mode
+
   return (
-    <Box pt={{ base: 20, md: 28 }} pb={8}>
+    <Box bg={bgColor} pt={{ base: 20, md: 28 }} pb={8} minH="100vh">
       <Container maxW="container.xl">
         <VStack spacing={4} align="stretch">
           <Heading as="h1" size="2xl">
             Kontak <Text as="span" color="green.500">Kami</Text>
           </Heading>
           <Text color="gray.600" mb={8}>
-            Hubungi kami jika ada saran yang ingin di sampaikan
+            Hubungi kami jika ada saran yang ingin disampaikan
           </Text>
           
           <Flex direction={{ base: 'column', md: 'row' }} gap={8}>
@@ -45,7 +49,7 @@ const Contact = () => {
             </Box>
 
             {/* Contact Form */}
-            <VStack flex={1} spacing={4} as="form">
+            <VStack flex={1} spacing={4} as="form" bg={cardBgColor} p={6} borderRadius="md" boxShadow="md">
               <FormControl>
                 <InputGroup>
                   <InputLeftElement pointerEvents="none" children={<FaUser color="gray.300" />} />

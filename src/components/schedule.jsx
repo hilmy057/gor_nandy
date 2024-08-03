@@ -51,9 +51,10 @@ const Schedule = () => {
     return date.toLocaleDateString('id-ID', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
   };
 
-  const bgColor = useColorModeValue('gray.50', 'gray.800');
-  const cardBgColor = useColorModeValue('white', 'gray.700');
-  const headingColor = useColorModeValue('green.700', 'green.200');
+  // Define colors using useColorModeValue
+  const bgColor = useColorModeValue('green.50', 'green.900'); // Background color for light and dark mode
+  const cardBgColor = useColorModeValue('white', 'green.800'); // Card background color for light and dark mode
+  const headingColor = useColorModeValue('green.700', 'green.200'); // Heading color for light and dark mode
 
   return (
     <Box minH="100vh" bg={bgColor} py={12} px={4} mt="60px">

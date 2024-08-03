@@ -47,9 +47,9 @@ const Home = ({ user }) => {
             animate={{ y: 0, opacity: 1 }}
             transition={{ delay: 0.5, duration: 0.8 }}
           >
-            <h1 className="text-6xl font-bold mb-4 text-emerald-400">Sehatkan Dirimu</h1>
-            <h2 className="text-4xl font-semibold mb-4 text-green-300">Dengan Berolahraga</h2>
-            <h3 className="text-3xl mb-8 text-green-200">di Gor Nandy</h3>
+            <h1 className="text-6xl font-bold mb-4 text-emerald-400">Gor Nandy</h1>
+            <h2 className="text-4xl font-semibold mb-4 text-green-300">Lapangan Terbaik, Fasilitas Modern, </h2>
+            <h3 className="text-3xl mb-8 text-green-200">Aksi Terdepan!</h3>
             
             <motion.button 
               onClick={handleButtonClick}

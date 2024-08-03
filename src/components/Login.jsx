@@ -68,7 +68,13 @@
         navigate('/beranda');
       } catch (error) {
         console.error('Login error:', error);
-        
+        toast({
+          title: 'Gagal masuk',
+          description: 'Email atau kata sandi salah. Silakan coba lagi.',
+          status: 'error',
+          duration: 3000,
+          isClosable: true,
+        });
       } finally {
         setIsLoading(false);
       }

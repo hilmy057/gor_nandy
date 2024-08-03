@@ -1,6 +1,5 @@
-import React, { useMemo } from 'react';
+import React, { useCallback, useMemo } from 'react';
 import { Link as RouterLink, useLocation, useNavigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
 import { supabase } from '../service/supabaseClient';
 import {
   Box,
@@ -17,190 +16,154 @@ import {
   HStack,
   Avatar,
   IconButton,
-  VStack,
-  Drawer,
-  DrawerBody,
-  DrawerHeader,
-  DrawerOverlay,
-  DrawerContent,
-  DrawerCloseButton,
   useDisclosure,
-  useBreakpointValue,
+  Stack,
 } from '@chakra-ui/react';
-import { HamburgerIcon } from '@chakra-ui/icons';
+import { HamburgerIcon, CloseIcon } from '@chakra-ui/icons';
 
-const MotionBox = motion(Box);
-const MotionText = motion(Text);
-const MotionButton = motion(Button);
+const NavLink = React.memo(({ to, children, onClick }) => {
+  const location = useLocation();
+  const bgColor = useColorModeValue('green.100', 'green.700');
+  
+  return (
+    <Link
+      as={RouterLink}
+      to={to}
+      px={3}
+      py={2}
+      rounded={'md'}
+      _hover={{
+        textDecoration: 'none',
+        bg: bgColor,
+        color: 'green.600',
+      }}
+      bg={location.pathname === to ? bgColor : 'transparent'}
+      fontWeight={location.pathname === to ? 'bold' : 'normal'}
+      onClick={onClick}
+      transition="all 0.3s"
+    >
+      {children}
+    </Link>
+  );
+});
 
-const Navbar = ({ user, setUser }) => {
+const Navbar = React.memo(({ user, setUser }) => {
   const location = useLocation();
   const navigate = useNavigate();
-  const currentPath = location.pathname.substring(1);
-  const { isOpen, onOpen, onClose } = useDisclosure();
-  const isMobile = useBreakpointValue({ base: true, md: false });
+  const { isOpen, onToggle } = useDisclosure();
 
-  const handleLogout = async () => {
+  const handleLogout = useCallback(async () => {
     await supabase.auth.signOut();
     setUser(null);
     navigate('/');
-  };
+  }, [setUser, navigate]);
 
-  const navItems = useMemo(() => {
-    const baseItems = ['Beranda', 'Tentang', 'Jadwal', 'Kontak'];
-    return user 
-      ? ['Beranda', 'Pemesanan', 'Pembayaran']
-      : baseItems;
-  }, [user]);
+  const bgColor = useColorModeValue('green.50', 'green.900');
+  const textColor = useColorModeValue('green.800', 'green.100');
 
-  const bgColor = useColorModeValue('white', 'gray.800');
-  const textColor = useColorModeValue('gray.700', 'gray.200');
-  const hoverColor = useColorModeValue('green.500', 'green.300');
+  const navItems = useMemo(() => 
+    user
+      ? [
+          { label: 'Beranda', href: '/beranda' },
+          { label: 'Pemesanan', href: '/pemesanan' },
+          { label: 'Pembayaran', href: '/pembayaran' },
+        ]
+      : [
+          { label: 'Beranda', href: '/' },
+          { label: 'Tentang', href: '/tentang' },
+          { label: 'Jadwal', href: '/jadwal' },
+          { label: 'Kontak', href: '/kontak' },
+        ],
+    [user]
+  );
 
-  const NavItems = ({ isMobile = false }) => (
-    <>
-      {navItems.map((item) => {
-        const path = item.toLowerCase().replace(' ', '-');
-        const isActive = currentPath === path;
-
-        return (
-          <MotionBox
-            key={item}
-            initial={{ y: -20, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            transition={{ delay: 0.1, duration: 0.5 }}
-          >
-            <Link
-              as={RouterLink}
-              to={`/${path}`}
-              color={isActive ? 'green.500' : textColor}
-              fontWeight={isActive ? 'semibold' : 'medium'}
-              position="relative"
-              _hover={{ color: hoverColor }}
-              transition="color 0.3s"
-              onClick={isMobile ? onClose : undefined}
-            >
-              {item}
-              {isActive && !isMobile && (
-                <MotionBox
-                  position="absolute"
-                  bottom="-2px"
-                  left={0}
-                  width="100%"
-                  height="2px"
-                  bg="green.500"
-                  layoutId="underline"
-                  initial={false}
-                  transition={{ type: "spring", stiffness: 300, damping: 30 }}
-                />
-              )}
-            </Link>
-          </MotionBox>
-        );
-      })}
-    </>
+  const renderNavItems = useCallback(() => 
+    navItems.map((navItem) => (
+      <NavLink key={navItem.label} to={navItem.href} onClick={onToggle}>
+        {navItem.label}
+      </NavLink>
+    )),
+    [navItems, onToggle]
   );
 
   return (
-    <Box
-      as="nav"
-      bg={bgColor}
-      boxShadow="sm"
-      position="fixed"
-      top={0}
-      left={0}
-      right={0}
-      zIndex={50}
-      width="full"
-    >
-      <Container maxW="container.xl">
-        <Flex justify="space-between" align="center" height="16">
-          <MotionText
-            fontSize="xl"
-            fontWeight="bold"
-            color="green.500"
-            initial={{ x: -50, opacity: 0 }}
-            animate={{ x: 0, opacity: 1 }}
-            transition={{ duration: 0.5 }}
-          >
-            Gor Nandy
-          </MotionText>
-          
-          {!isMobile && (
-            <HStack spacing={8}>
-              <NavItems />
+    <Box bg={bgColor} px={4} position="fixed" top={0} left={0} right={0} zIndex={1000} boxShadow="md">
+      <Container maxW={'6xl'}>
+        <Flex h={20} alignItems={'center'} justifyContent={'space-between'}>
+          <IconButton
+            size={'md'}
+            icon={isOpen ? <CloseIcon /> : <HamburgerIcon />}
+            aria-label={'Open Menu'}
+            display={{ md: 'none' }}
+            onClick={onToggle}
+            variant="outline"
+            colorScheme="green"
+          />
+          <HStack spacing={8} alignItems={'center'}>
+            <Box>
+              <Text fontSize="2xl" fontWeight="bold" color="green.500">
+                Gor Nandy
+              </Text>
+            </Box>
+            <HStack as={'nav'} spacing={6} display={{ base: 'none', md: 'flex' }}>
+              {renderNavItems()}
             </HStack>
-          )}
-
-          {isMobile ? (
-            <IconButton
-              icon={<HamburgerIcon />}
-              aria-label="Open menu"
-              variant="ghost"
-              onClick={onOpen}
-            />
-          ) : (
-            user ? (
-              <Flex align="center">
-                <HStack spacing={4} mr={4}>
-                  <NavItems />
-                </HStack>
-                <Menu>
-                  <MenuButton
-                    as={IconButton}
-                    aria-label="User menu"
-                    icon={<Avatar size="sm" name={user.user_metadata.nama_lengkap} src={user.user_metadata.avatar_url} />}
-                    variant="ghost"
-                    _hover={{ bg: 'green.50' }}
-                  />
-                  <MenuList>
-                    <MenuItem as={RouterLink} to="/profile">Profile</MenuItem>
-                    <MenuItem onClick={handleLogout}>Logout</MenuItem>
-                  </MenuList>
-                </Menu>
-              </Flex>
-            ) : (
-              <Link as={RouterLink} to="/login">
-                <MotionButton
-                  colorScheme="green"
-                  variant="outline"
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
+          </HStack>
+          <Flex alignItems={'center'}>
+            {user ? (
+              <Menu>
+                <MenuButton
+                  as={Button}
+                  rounded={'full'}
+                  variant={'link'}
+                  cursor={'pointer'}
+                  minW={0}
                 >
-                  Masuk
-                </MotionButton>
-              </Link>
-            )
-          )}
+                  <Avatar
+                    size={'sm'}
+                    src={user.user_metadata?.avatar_url}
+                    name={user.user_metadata?.nama_lengkap}
+                  />
+                </MenuButton>
+                <MenuList>
+                  <MenuItem as={RouterLink} to="/profile" color={textColor}>
+                    Profil
+                  </MenuItem>
+                  <MenuItem onClick={handleLogout} color={textColor}>Keluar</MenuItem>
+                </MenuList>
+              </Menu>
+            ) : (
+              <Button
+                as={RouterLink}
+                to="/login"
+                fontSize={'sm'}
+                fontWeight={600}
+                color={'white'}
+                bg={'green.400'}
+                _hover={{
+                  bg: 'green.500',
+                }}
+                _active={{
+                  bg: 'green.600',
+                }}
+                transition="all 0.3s"
+              >
+                Masuk
+              </Button>
+            )}
+          </Flex>
         </Flex>
-      </Container>
 
-      {isMobile && (
-        <Drawer isOpen={isOpen} placement="left" onClose={onClose}>
-          <DrawerOverlay />
-          <DrawerContent>
-            <DrawerCloseButton />
-            <DrawerHeader>Menu</DrawerHeader>
-            <DrawerBody>
-              <VStack spacing={4} align="stretch">
-                <NavItems isMobile />
-                {user ? (
-                  <>
-                    <Link as={RouterLink} to="/profile" onClick={onClose}>Profile</Link>
-                    <Button onClick={() => { handleLogout(); onClose(); }}>Logout</Button>
-                  </>
-                ) : (
-                  <Link as={RouterLink} to="/login" onClick={onClose}>
-                    <Button colorScheme="green" width="full">Masuk</Button>
-                  </Link>
-                )}
-              </VStack>
-            </DrawerBody>
-          </DrawerContent>
-        </Drawer>
-      )}
+        {isOpen ? (
+          <Box pb={4} display={{ md: 'none' }}>
+            <Stack as={'nav'} spacing={4}>
+              {renderNavItems()}
+            </Stack>
+          </Box>
+        ) : null}
+      </Container>
     </Box>
   );
-};
+});
 
 export default Navbar;
